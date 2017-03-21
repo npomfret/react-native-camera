@@ -30,6 +30,7 @@ public class MutableImage {
     private final byte[] originalImageData;
     private Bitmap currentRepresentation;
     private Metadata originalImageMetaData;
+    private boolean hasBeenReoriented = false;
 
     public MutableImage(byte[] originalImageData) {
         this.originalImageData = originalImageData;
@@ -120,6 +121,7 @@ public class MutableImage {
             throw new ImageMutationFailedException("failed to rotate");
 
         this.currentRepresentation = transformedBitmap;
+        this.hasBeenReoriented = true;
     }
 
     private static Bitmap toBitmap(byte[] data) {
@@ -144,23 +146,23 @@ public class MutableImage {
 
         try {
             ExifInterface exif = new ExifInterface(file.getAbsolutePath());
-            //todo: copy original exif data to the output file
-            writeLocationExifData(options, exif);
-            rewriteOrientation(exif);
-            exif.saveAttributes();
 
-            Metadata metadataafter = ImageMetadataReader.readMetadata(
-                    new FileInputStream(file),
-                    file.length()
-            );
-            for (Directory directory : metadataafter.getDirectories()) {
+            // copy original exif data to the output exif...
+            // unfortunately, this Android ExifInterface class doesn't understand all the tags so we lose some
+            for (Directory directory : originalImageMetaData().getDirectories()) {
                 for (Tag tag : directory.getTags()) {
                     int tagType = tag.getTagType();
                     Object object = directory.getObject(tagType);
-                    System.out.println(directory.getName() + " / " + tag.getTagName() + " = " + object);
+                    exif.setAttribute(tag.getTagName(), object.toString());
                 }
             }
 
+            writeLocationExifData(options, exif);
+
+            if(hasBeenReoriented)
+                rewriteOrientation(exif);
+
+            exif.saveAttributes();
         } catch (ImageProcessingException  | IOException e) {
             Log.e(TAG, "failed to save exif data", e);
         }
