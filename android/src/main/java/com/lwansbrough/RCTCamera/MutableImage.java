@@ -180,7 +180,7 @@ public class MutableImage {
         if (!metadata.hasKey("location"))
             return;
 
-        ReadableMap location = options.getMap("location");
+        ReadableMap location = metadata.getMap("location");
         if(!location.hasKey("coords"))
             return;
 
